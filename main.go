@@ -18,7 +18,6 @@ import (
 	"github.com/go-flac/flacpicture"
 	"github.com/go-flac/flacvorbis"
 	"github.com/go-flac/go-flac"
-	"github.com/wsdbd/qn-decoder/logger"
 	"image/color"
 	"log"
 	"os"
@@ -33,7 +32,6 @@ import (
 var (
 	corekey        string        = "687A4852416D736F356B496E62617857"
 	metaKey        string        = "2331346C6A6B5F215C5D2630553C2728"
-	magicHeader    string        = "4354454e4644414d"
 	logEntry       *widget.Entry // 引用到 logEntry 组件
 	selectedFolder string        // 保存选择的文件夹路径
 	folderLabel    *widget.Label // 用于显示选择的文件夹路径
@@ -179,23 +177,23 @@ func Run(inputPath string) {
 func DecodeNCM(filePath string, outputFolder string) string {
 	f, err := os.Open(filePath)
 	if err != nil {
-		logger.Println(err)
+		fmt.Println(err)
 	}
 	defer f.Close()
 
 	header := make([]byte, 8)
 	_, err = f.Read(header)
 	if err != nil {
-		logger.Println(err)
+		fmt.Println(err)
 	}
 
 	if string(header) != string(Unhexlify("4354454e4644414d")) {
-		logger.Println("不是正常的ncm格式！")
+		fmt.Println("不是正常的ncm格式！")
 	}
 
 	_, err = f.Seek(2, 1)
 	if err != nil {
-		logger.Println(err)
+		fmt.Println(err)
 	}
 
 	keyLengthBytes := make([]byte, 4)
@@ -231,7 +229,7 @@ func DecodeNCM(filePath string, outputFolder string) string {
 
 	info, err := os.Stat(filePath)
 	if err != nil {
-		logger.Println(err)
+		fmt.Println(err)
 	}
 
 	format := "mp3"
@@ -247,7 +245,7 @@ func DecodeNCM(filePath string, outputFolder string) string {
 		// identifier = string(newMetaData)
 		realMeataData, err := base64.StdEncoding.DecodeString(string(newMetaData[22:]))
 		if err != nil {
-			logger.Println(err)
+			fmt.Println(err)
 		}
 		decodeMetaData := aesDecryptECB(Unhexlify(metaKey), realMeataData)
 		json.Unmarshal(decodeMetaData[6:], &metaDataMap)
@@ -279,7 +277,7 @@ func DecodeNCM(filePath string, outputFolder string) string {
 
 	pos, err := f.Seek(int64(imageSpace-imageSize), 1)
 	if err != nil {
-		logger.Println(err)
+		fmt.Println(err)
 	}
 
 	dataLen := info.Size() - pos
@@ -311,7 +309,7 @@ func DecodeNCM(filePath string, outputFolder string) string {
 	defer of.Close()
 	_, err = of.Write([]byte(newData))
 	if err != nil {
-		logger.Println(err)
+		fmt.Println(err)
 	}
 	of.Sync()
 
@@ -347,7 +345,7 @@ func DecodeNCM(filePath string, outputFolder string) string {
 		defer mp3File.Close()
 
 		if err != nil {
-			logger.Println(err)
+			fmt.Println(err)
 		}
 
 		mp3File.SetDefaultEncoding(id3v2.EncodingUTF8)
@@ -367,13 +365,13 @@ func DecodeNCM(filePath string, outputFolder string) string {
 		}
 
 		if err = mp3File.Save(); err != nil {
-			logger.Println(err)
+			fmt.Println(err)
 		}
 
 	} else {
 		flacFile, err := flac.ParseFile(outPath)
 		if err != nil {
-			logger.Println(err)
+			fmt.Println(err)
 		}
 
 		cmts, idx := extractFLACComment(outPath)
@@ -398,7 +396,7 @@ func DecodeNCM(filePath string, outputFolder string) string {
 		} else {
 			pic, err = flacpicture.NewFromImageData(flacpicture.PictureTypeFrontCover, "Front cover", imageDataBytes, imageFormat)
 			if err != nil {
-				logger.Println(err)
+				fmt.Println(err)
 			}
 			picturemeta := pic.Marshal()
 			flacFile.Meta = append(flacFile.Meta, &picturemeta)
@@ -406,12 +404,12 @@ func DecodeNCM(filePath string, outputFolder string) string {
 
 		err = flacFile.Save(outPath)
 		if err != nil {
-			logger.Println(err)
+			fmt.Println(err)
 		}
 
 	}
 
-	logger.Println(basename, "->", newFilename)
+	fmt.Println(basename, "->", newFilename)
 
 	return basename + "->" + newFilename
 }
@@ -419,7 +417,7 @@ func DecodeNCM(filePath string, outputFolder string) string {
 func extractFLACComment(fileName string) (*flacvorbis.MetaDataBlockVorbisComment, int) {
 	f, err := flac.ParseFile(fileName)
 	if err != nil {
-		logger.Println(err)
+		fmt.Println(err)
 	}
 
 	var cmt *flacvorbis.MetaDataBlockVorbisComment
@@ -429,7 +427,7 @@ func extractFLACComment(fileName string) (*flacvorbis.MetaDataBlockVorbisComment
 			cmt, err = flacvorbis.ParseFromMetaDataBlock(*meta)
 			cmtIdx = idx
 			if err != nil {
-				logger.Println(err)
+				fmt.Println(err)
 			}
 		}
 	}
@@ -439,7 +437,7 @@ func extractFLACComment(fileName string) (*flacvorbis.MetaDataBlockVorbisComment
 func extractFLACCover(fileName string) *flacpicture.MetadataBlockPicture {
 	f, err := flac.ParseFile(fileName)
 	if err != nil {
-		logger.Println(err)
+		fmt.Println(err)
 		return nil
 	}
 
@@ -448,7 +446,7 @@ func extractFLACCover(fileName string) *flacpicture.MetadataBlockPicture {
 		if meta.Type == flac.Picture {
 			pic, err = flacpicture.ParseFromMetaDataBlock(*meta)
 			if err != nil {
-				logger.Println(err)
+				fmt.Println(err)
 			}
 		}
 	}
