@@ -49,10 +49,6 @@ func init() {
 			break
 		}
 	}
-	err := os.Mkdir("_Music", 0750)
-	if err != nil && !os.IsExist(err) {
-		log.Fatal(err)
-	}
 }
 
 func main() {
@@ -86,6 +82,10 @@ func main() {
 	// Button 用于执行操作
 	startButton := widget.NewButton("开始", func() {
 		if selectedFolder != "" {
+			err := os.Mkdir(selectedFolder+"/输出目录", 0750)
+			if err != nil && !os.IsExist(err) {
+				log.Fatal(err)
+			}
 			Run(selectedFolder)
 		} else {
 			//log.Println("请先选择文件夹路径")
@@ -144,7 +144,7 @@ func showFolderDialog(window fyne.Window) {
 }
 
 func Run(inputPath string) {
-	outputPath := inputPath + "/_Music"
+	outputPath := inputPath + "/输出目录"
 	err := filepath.Walk(inputPath,
 		func(path string, info os.FileInfo, err error) error {
 			defer func() {
